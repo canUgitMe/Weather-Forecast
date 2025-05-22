@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Weather App</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
   <style>
     * {
       margin: 0;
@@ -22,7 +22,6 @@
       color: #d1d5db;
       position: relative;
       z-index: 1;
-
       text-shadow:
         -1px -1px 1px #000,
          1px -1px 1px #000,
@@ -106,6 +105,13 @@
       padding: 0.6rem;
       border-radius: 15px;
       flex: 1;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .day:hover {
+      transform: scale(1.05) translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.15);
     }
     .error {
       color: #f87171;
@@ -114,19 +120,98 @@
     img {
       height: 60px;
     }
+    .toggle-container {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      display: none; /* hidden by default */
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #facc15;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Volume button styles (BIGGER) */
+    #volume-toggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+      z-index: 10;
+      color: #facc15;
+      font-size: 32px;
+      text-shadow:
+        -1px -1px 1px #000,
+         1px -1px 1px #000,
+        -1px  1px 1px #000,
+         1px  1px 1px #000;
+    }
+    #volume-toggle:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
   </style>
 </head>
 <body>
   <video autoplay muted loop id="bg-video">
-    <source src="aesthetic-landscape-with-train.3840x2160.mp4" type="video/mp4">
+    <source src="aesthetic-landscape-with-train.3840x2160.mp4" type="video/mp4" />
     Your browser does not support HTML5 video.
   </video>
 
-  <!-- Background Music -->
-  <audio autoplay loop>
+  <audio id="bg-music" autoplay loop muted>
     <source src="background-music.mp3" type="audio/mpeg" />
     Your browser does not support the audio element.
   </audio>
+
+  <!-- Volume toggle button top-right -->
+  <button id="volume-toggle" aria-label="Toggle sound on/off" title="Toggle sound on/off">
+    🔈
+  </button>
 
   <div class="container">
     <h1>Weather Forecasts</h1>
@@ -134,50 +219,112 @@
       <input type="text" id="city" placeholder="Enter city name" />
       <button onclick="getWeather()">Get Weather</button>
     </div>
+
+    <div class="toggle-container" id="toggleContainer">
+      <label style="font-weight:bold">°C</label>
+      <label class="switch">
+        <input type="checkbox" id="unitToggle" onchange="updateDisplay()" />
+        <span class="slider"></span>
+      </label>
+      <label style="font-weight:bold">°F</label>
+    </div>
+
     <div id="weather" class="weather"></div>
     <div id="error" class="error"></div>
-  </div>            
+  </div>
 
   <script>
+    let weatherData = null;
+
     async function getWeather() {
       const city = document.getElementById('city').value;
       const weatherBox = document.getElementById('weather');
       const errorBox = document.getElementById('error');
+      const toggleContainer = document.getElementById('toggleContainer');
 
       weatherBox.innerHTML = '';
       errorBox.textContent = '';
+      toggleContainer.style.display = 'none';
+      weatherData = null;
 
       try {
         const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=ffa1785d66e54ccbb3944807252205&q=${city}&days=4`);
         if (!res.ok) throw new Error("Invalid response");
         const data = await res.json();
-
-        const current = data.current;
-        const forecastDays = data.forecast.forecastday;
-
-        let forecastHTML = '<div class="forecast">';
-        for (let i = 0; i < forecastDays.length; i++) {
-          const day = forecastDays[i];
-          forecastHTML += `
-            <div class="day">
-              <div>${new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-              <img src="${day.day.condition.icon}" alt="">
-              <div>${day.day.avgtemp_c}&deg;C</div>
-            </div>
-          `;
-        }
-        forecastHTML += '</div>';
-
-        weatherBox.innerHTML = `
-          <h2>${data.location.name}, ${data.location.country}</h2>
-          <div class="temp">${current.temp_c}&deg;C</div>
-          <div class="desc">${current.condition.text}</div>
-          <img src="${current.condition.icon}" alt="Weather icon">
-          ${forecastHTML}
-        `;
+        weatherData = data;
+        toggleContainer.style.display = 'flex'; // Show toggle now
+        updateDisplay();
       } catch (error) {
         errorBox.textContent = 'City not found or error fetching data.';
       }
+    }
+
+    // New helper function for weather tips
+    function getWeatherTip(condition) {
+      const c = condition.toLowerCase();
+      if (c.includes('sunny')) {
+        return "☀️ Oh! It's sunny. Perfect day to soak up some vitamin D!";
+      }
+      if (c.includes('cloud') || c.includes('overcast')) {
+        return "☁️ It's cloudy. Great weather for a cozy indoor day!";
+      }
+      if (c.includes('rain')) {
+        return "🌧️ Don't forget your umbrella! Rainy days call for warm drinks.";
+      }
+      if (c.includes('snow')) {
+        return "❄️ Snow is falling! Time for hot cocoa and snowball fights.";
+      }
+      if (c.includes('storm') || c.includes('thunder')) {
+        return "⛈️ Stay safe! Better to stay indoors during the storm.";
+      }
+      if (c.includes('fog') || c.includes('mist')) {
+        return "🌫️ Foggy outside. Drive safe and keep your lights on!";
+      }
+      if (c.includes('wind')) {
+        return "🌬️ It's windy. Hold onto your hats!";
+      }
+      // Default tip if no conditions matched
+      return "🌈 Have a great day, whatever the weather!";
+    }
+
+    function updateDisplay() {
+      if (!weatherData) return;
+
+      const isFahrenheit = document.getElementById('unitToggle').checked;
+      const weatherBox = document.getElementById('weather');
+
+      const current = weatherData.current;
+      const forecastDays = weatherData.forecast.forecastday;
+
+      let forecastHTML = '<div class="forecast">';
+      for (let i = 0; i < forecastDays.length; i++) {
+        const day = forecastDays[i];
+        const temp = isFahrenheit ? day.day.avgtemp_f : day.day.avgtemp_c;
+        const unit = isFahrenheit ? '&deg;F' : '&deg;C';
+        forecastHTML += `
+          <div class="day">
+            <div>${new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
+            <img src="${day.day.condition.icon}" alt="">
+            <div>${temp}${unit}</div>
+          </div>
+        `;
+      }
+      forecastHTML += '</div>';
+
+      const currentTemp = isFahrenheit ? current.temp_f : current.temp_c;
+      const unit = isFahrenheit ? '&deg;F' : '&deg;C';
+
+      // Get weather tip here
+      const tip = getWeatherTip(current.condition.text);
+
+      weatherBox.innerHTML = `
+        <h2>${weatherData.location.name}, ${weatherData.location.country}</h2>
+        <div class="temp">${currentTemp}${unit}</div>
+        <div class="desc">${current.condition.text}</div>
+        <div style="margin-bottom: 1rem; font-style: italic; font-weight: 600;">${tip}</div>
+        <img src="${current.condition.icon}" alt="Weather icon">
+        ${forecastHTML}
+      `;
     }
 
     document.getElementById('city').addEventListener('keydown', function (e) {
@@ -185,6 +332,39 @@
         getWeather();
       }
     });
+
+    // Initially muted audio and play on first user interaction (click)
+    window.addEventListener('click', () => {
+      const audio = document.getElementById('bg-music');
+      if (audio.muted) {
+        audio.muted = false;
+        audio.play();
+        updateVolumeIcon();
+      }
+    }, { once: true });
+
+    // Volume toggle button functionality
+    const volumeBtn = document.getElementById('volume-toggle');
+    const audio = document.getElementById('bg-music');
+
+    function updateVolumeIcon() {
+      if (audio.muted) {
+        volumeBtn.textContent = '🔇'; // muted icon
+      } else {
+        volumeBtn.textContent = '🔈'; // volume on icon
+      }
+    }
+
+    volumeBtn.addEventListener('click', () => {
+      audio.muted = !audio.muted;
+      updateVolumeIcon();
+      if (!audio.muted) {
+        audio.play();
+      }
+    });
+
+    // Set initial icon state
+    updateVolumeIcon();
   </script>
 </body>
 </html>
