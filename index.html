@@ -46,6 +46,10 @@
       width: 100%;
       text-align: center;
       backdrop-filter: blur(20px);
+      transition: background-color 0.4s ease;
+    }
+    body.dark .container {
+      background-color: black !important;
     }
     h1 {
       font-size: 2rem;
@@ -126,7 +130,7 @@
       justify-content: center;
       align-items: center;
       gap: 0.5rem;
-      display: none; /* hidden by default */
+      display: none;
     }
     .switch {
       position: relative;
@@ -168,11 +172,8 @@
       transform: translateX(26px);
     }
 
-    /* Volume button styles (BIGGER) */
-    #volume-toggle {
+    #volume-toggle, #dark-mode-toggle {
       position: fixed;
-      top: 15px;
-      right: 15px;
       background: rgba(255, 255, 255, 0.15);
       border-radius: 50%;
       width: 60px;
@@ -192,8 +193,17 @@
         -1px  1px 1px #000,
          1px  1px 1px #000;
     }
-    #volume-toggle:hover {
+    #volume-toggle:hover, #dark-mode-toggle:hover {
       background: rgba(255, 255, 255, 0.3);
+    }
+    #volume-toggle {
+      top: 15px;
+      right: 15px;
+    }
+    #dark-mode-toggle {
+      top: 90px;
+      right: 15px;
+      font-size: 28px;
     }
   </style>
 </head>
@@ -208,10 +218,8 @@
     Your browser does not support the audio element.
   </audio>
 
-  <!-- Volume toggle button top-right -->
-  <button id="volume-toggle" aria-label="Toggle sound on/off" title="Toggle sound on/off">
-    🔈
-  </button>
+  <button id="volume-toggle" aria-label="Toggle sound on/off" title="Toggle sound on/off">🔈</button>
+  <button id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌓</button>
 
   <div class="container">
     <h1>Weather Forecasts</h1>
@@ -252,38 +260,22 @@
         if (!res.ok) throw new Error("Invalid response");
         const data = await res.json();
         weatherData = data;
-        toggleContainer.style.display = 'flex'; // Show toggle now
+        toggleContainer.style.display = 'flex';
         updateDisplay();
       } catch (error) {
         errorBox.textContent = 'City not found or error fetching data.';
       }
     }
 
-    // New helper function for weather tips
     function getWeatherTip(condition) {
       const c = condition.toLowerCase();
-      if (c.includes('sunny')) {
-        return "☀️ Oh! It's sunny. Perfect day to soak up some vitamin D!";
-      }
-      if (c.includes('cloud') || c.includes('overcast')) {
-        return "☁️ It's cloudy. Great weather for a cozy indoor day!";
-      }
-      if (c.includes('rain')) {
-        return "🌧️ Don't forget your umbrella! Rainy days call for warm drinks.";
-      }
-      if (c.includes('snow')) {
-        return "❄️ Snow is falling! Time for hot cocoa and snowball fights.";
-      }
-      if (c.includes('storm') || c.includes('thunder')) {
-        return "⛈️ Stay safe! Better to stay indoors during the storm.";
-      }
-      if (c.includes('fog') || c.includes('mist')) {
-        return "🌫️ Foggy outside. Drive safe and keep your lights on!";
-      }
-      if (c.includes('wind')) {
-        return "🌬️ It's windy. Hold onto your hats!";
-      }
-      // Default tip if no conditions matched
+      if (c.includes('sunny')) return "☀️ Oh! It's sunny. Perfect day to soak up some vitamin D!";
+      if (c.includes('cloud') || c.includes('overcast')) return "☁️ It's cloudy. Great weather for a cozy indoor day!";
+      if (c.includes('rain')) return "🌧️ Don't forget your umbrella! Rainy days call for warm drinks.";
+      if (c.includes('snow')) return "❄️ Snow is falling! Time for hot cocoa and snowball fights.";
+      if (c.includes('storm') || c.includes('thunder')) return "⛈️ Stay safe! Better to stay indoors during the storm.";
+      if (c.includes('fog') || c.includes('mist')) return "🌫️ Foggy outside. Drive safe and keep your lights on!";
+      if (c.includes('wind')) return "🌬️ It's windy. Hold onto your hats!";
       return "🌈 Have a great day, whatever the weather!";
     }
 
@@ -292,7 +284,6 @@
 
       const isFahrenheit = document.getElementById('unitToggle').checked;
       const weatherBox = document.getElementById('weather');
-
       const current = weatherData.current;
       const forecastDays = weatherData.forecast.forecastday;
 
@@ -313,8 +304,6 @@
 
       const currentTemp = isFahrenheit ? current.temp_f : current.temp_c;
       const unit = isFahrenheit ? '&deg;F' : '&deg;C';
-
-      // Get weather tip here
       const tip = getWeatherTip(current.condition.text);
 
       weatherBox.innerHTML = `
@@ -328,12 +317,10 @@
     }
 
     document.getElementById('city').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        getWeather();
-      }
+      if (e.key === 'Enter') getWeather();
     });
 
-    // Initially muted audio and play on first user interaction (click)
+    // Sound autoplay
     window.addEventListener('click', () => {
       const audio = document.getElementById('bg-music');
       if (audio.muted) {
@@ -343,28 +330,26 @@
       }
     }, { once: true });
 
-    // Volume toggle button functionality
     const volumeBtn = document.getElementById('volume-toggle');
     const audio = document.getElementById('bg-music');
 
     function updateVolumeIcon() {
-      if (audio.muted) {
-        volumeBtn.textContent = '🔇'; // muted icon
-      } else {
-        volumeBtn.textContent = '🔈'; // volume on icon
-      }
+      volumeBtn.textContent = audio.muted ? '🔇' : '🔈';
     }
 
     volumeBtn.addEventListener('click', () => {
       audio.muted = !audio.muted;
       updateVolumeIcon();
-      if (!audio.muted) {
-        audio.play();
-      }
+      if (!audio.muted) audio.play();
     });
 
-    // Set initial icon state
     updateVolumeIcon();
+
+    // Dark mode toggle
+    const darkModeBtn = document.getElementById('dark-mode-toggle');
+    darkModeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+    });
   </script>
 </body>
 </html>
