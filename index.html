@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      background: linear-gradient(160deg, #4e54c8, #8f94fb);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+      color: #d1d5db;
+      position: relative;
+      z-index: 1;
+
+      text-shadow:
+        -1px -1px 1px #000,
+         1px -1px 1px #000,
+        -1px  1px 1px #000,
+         1px  1px 1px #000;
+    }
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      object-fit: fill;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      border-radius: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(20px);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.2rem;
+      font-weight: 800;
+    }
+    input {
+      padding: 0.6rem;
+      width: 65%;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      background-color: rgba(255, 255, 255, 0.15);
+      color: black;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      margin-left: 0.5rem;
+      margin-top: 0.5rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #facc15;
+      color: #1f2937;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #eab308;
+    }
+    .weather {
+      margin-top: 2rem;
+    }
+    .weather h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .temp {
+      font-size: 3rem;
+      font-weight: bold;
+      margin: 0.5rem 0;
+    }
+    .desc {
+      font-size: 1rem;
+      color: #e0e7ff;
+      margin-bottom: 1rem;
+    }
+    .forecast {
+      display: flex;
+      justify-content: space-around;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .day {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.6rem;
+      border-radius: 15px;
+      flex: 1;
+    }
+    .error {
+      color: #f87171;
+      margin-top: 1rem;
+    }
+    img {
+      height: 60px;
+    }
+  </style>
+</head>
+<body>
+  <video autoplay muted loop id="bg-video">
+    <source src="aesthetic-landscape-with-train.3840x2160.mp4" type="video/mp4">
+    Your browser does not support HTML5 video.
+  </video>
+
+  <!-- Background Music -->
+  <audio autoplay loop>
+    <source src="background-music.mp3" type="audio/mpeg" />
+    Your browser does not support the audio element.
+  </audio>
+
+  <div class="container">
+    <h1>Weather Forecasts</h1>
+    <div>
+      <input type="text" id="city" placeholder="Enter city name" />
+      <button onclick="getWeather()">Get Weather</button>
+    </div>
+    <div id="weather" class="weather"></div>
+    <div id="error" class="error"></div>
+  </div>            
+
+  <script>
+    async function getWeather() {
+      const city = document.getElementById('city').value;
+      const weatherBox = document.getElementById('weather');
+      const errorBox = document.getElementById('error');
+
+      weatherBox.innerHTML = '';
+      errorBox.textContent = '';
+
+      try {
+        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=ffa1785d66e54ccbb3944807252205&q=${city}&days=4`);
+        if (!res.ok) throw new Error("Invalid response");
+        const data = await res.json();
+
+        const current = data.current;
+        const forecastDays = data.forecast.forecastday;
+
+        let forecastHTML = '<div class="forecast">';
+        for (let i = 0; i < forecastDays.length; i++) {
+          const day = forecastDays[i];
+          forecastHTML += `
+            <div class="day">
+              <div>${new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
+              <img src="${day.day.condition.icon}" alt="">
+              <div>${day.day.avgtemp_c}&deg;C</div>
+            </div>
+          `;
+        }
+        forecastHTML += '</div>';
+
+        weatherBox.innerHTML = `
+          <h2>${data.location.name}, ${data.location.country}</h2>
+          <div class="temp">${current.temp_c}&deg;C</div>
+          <div class="desc">${current.condition.text}</div>
+          <img src="${current.condition.icon}" alt="Weather icon">
+          ${forecastHTML}
+        `;
+      } catch (error) {
+        errorBox.textContent = 'City not found or error fetching data.';
+      }
+    }
+
+    document.getElementById('city').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        getWeather();
+      }
+    });
+  </script>
+</body>
+</html>
