@@ -22,11 +22,11 @@
       color: #d1d5db;
       position: relative;
       z-index: 1;
-      text-shadow:
-        -1px -1px 1px #000,
-         1px -1px 1px #000,
-        -1px  1px 1px #000,
-         1px  1px 1px #000;
+      text-shadow: -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000, 1px 1px 1px #000;
+    }
+    body.dark {
+      background: #111827;
+      color: #f3f4f6;
     }
     #bg-video {
       position: fixed;
@@ -35,7 +35,7 @@
       width: 100%;
       height: 100%;
       z-index: -1;
-      object-fit: fill;
+      object-fit: cover;
     }
     .container {
       background: rgba(255, 255, 255, 0.1);
@@ -49,7 +49,7 @@
       transition: background-color 0.4s ease;
     }
     body.dark .container {
-      background-color: black !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
     }
     h1 {
       font-size: 2rem;
@@ -171,7 +171,6 @@
     input:checked + .slider:before {
       transform: translateX(26px);
     }
-
     #volume-toggle, #dark-mode-toggle {
       position: fixed;
       background: rgba(255, 255, 255, 0.15);
@@ -187,11 +186,7 @@
       z-index: 10;
       color: #facc15;
       font-size: 32px;
-      text-shadow:
-        -1px -1px 1px #000,
-         1px -1px 1px #000,
-        -1px  1px 1px #000,
-         1px  1px 1px #000;
+      text-shadow: -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000, 1px 1px 1px #000;
     }
     #volume-toggle:hover, #dark-mode-toggle:hover {
       background: rgba(255, 255, 255, 0.3);
@@ -204,6 +199,15 @@
       top: 90px;
       right: 15px;
       font-size: 28px;
+    }
+
+    /* Loading Spinner */
+    #loading {
+      margin-top: 1rem;
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #facc15;
+      display: none;
     }
   </style>
 </head>
@@ -221,12 +225,19 @@
   <button id="volume-toggle" aria-label="Toggle sound on/off" title="Toggle sound on/off">🔈</button>
   <button id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌓</button>
 
-  <div class="container">
-    <h1>Weather Forecasts</h1>
+  <div id="landingPage" class="container">
+    <h1>Weather Forecast</h1>
+    <button onclick="showMainApp()">Get Weather</button>
+  </div>
+
+  <div id="mainApp" class="container" style="display:none;">
+    <h1>Enter City Name</h1>
     <div>
-      <input type="text" id="city" placeholder="Enter city name" />
-      <button onclick="getWeather()">Get Weather</button>
+      <input type="text" id="city" placeholder="eg. Kolkata, Delhi, Tokyo" />
+      <button onclick="getWeather()">Show Weather</button>
     </div>
+
+    <div id="loading">⏳ Loading weather data...</div>
 
     <div class="toggle-container" id="toggleContainer">
       <label style="font-weight:bold">°C</label>
@@ -244,16 +255,29 @@
   <script>
     let weatherData = null;
 
+    function showMainApp() {
+      document.getElementById('landingPage').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+    }
+
     async function getWeather() {
-      const city = document.getElementById('city').value;
+      const city = document.getElementById('city').value.trim();
       const weatherBox = document.getElementById('weather');
       const errorBox = document.getElementById('error');
       const toggleContainer = document.getElementById('toggleContainer');
+      const loadingIndicator = document.getElementById('loading');
 
       weatherBox.innerHTML = '';
       errorBox.textContent = '';
       toggleContainer.style.display = 'none';
+      loadingIndicator.style.display = 'block';
       weatherData = null;
+
+      if (!city) {
+        loadingIndicator.style.display = 'none';
+        errorBox.textContent = 'Please enter a city name.';
+        return;
+      }
 
       try {
         const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=ffa1785d66e54ccbb3944807252205&q=${city}&days=4`);
@@ -264,6 +288,8 @@
         updateDisplay();
       } catch (error) {
         errorBox.textContent = 'City not found or error fetching data.';
+      } finally {
+        loadingIndicator.style.display = 'none';
       }
     }
 
@@ -288,8 +314,7 @@
       const forecastDays = weatherData.forecast.forecastday;
 
       let forecastHTML = '<div class="forecast">';
-      for (let i = 0; i < forecastDays.length; i++) {
-        const day = forecastDays[i];
+      forecastDays.forEach(day => {
         const temp = isFahrenheit ? day.day.avgtemp_f : day.day.avgtemp_c;
         const unit = isFahrenheit ? '&deg;F' : '&deg;C';
         forecastHTML += `
@@ -297,9 +322,8 @@
             <div>${new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
             <img src="${day.day.condition.icon}" alt="">
             <div>${temp}${unit}</div>
-          </div>
-        `;
-      }
+          </div>`;
+      });
       forecastHTML += '</div>';
 
       const currentTemp = isFahrenheit ? current.temp_f : current.temp_c;
@@ -312,15 +336,13 @@
         <div class="desc">${current.condition.text}</div>
         <div style="margin-bottom: 1rem; font-style: italic; font-weight: 600;">${tip}</div>
         <img src="${current.condition.icon}" alt="Weather icon">
-        ${forecastHTML}
-      `;
+        ${forecastHTML}`;
     }
 
-    document.getElementById('city').addEventListener('keydown', function (e) {
+    document.getElementById('city').addEventListener('keydown', e => {
       if (e.key === 'Enter') getWeather();
     });
 
-    // Sound autoplay
     window.addEventListener('click', () => {
       const audio = document.getElementById('bg-music');
       if (audio.muted) {
@@ -343,13 +365,12 @@
       if (!audio.muted) audio.play();
     });
 
-    updateVolumeIcon();
-
-    // Dark mode toggle
     const darkModeBtn = document.getElementById('dark-mode-toggle');
     darkModeBtn.addEventListener('click', () => {
       document.body.classList.toggle('dark');
     });
+
+    updateVolumeIcon();
   </script>
 </body>
 </html>
